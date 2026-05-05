@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../database/connection.js';
 import { Article, User, Category, Collect, Like } from '../../entity/index.js';
 import { NotFoundError, BadRequestError } from '../../utils/helper.js';
+import { formatDisplayTime } from '../../utils/time.js';
 
 export class ArticleService {
   private articleRepo = AppDataSource.getRepository(Article);
@@ -146,7 +147,7 @@ export class ArticleService {
       liked: liked ? 1 : 0,
       merited: merited ? 1 : 0,
       collected: collected ? 1 : 0,
-      pubTimeInfo: article.publishedAt?.toISOString() || '',
+      pubTimeInfo: formatDisplayTime(article.publishedAt),
       publisherInfo: {
         userId: article.author.id,
         username: article.author.nickname,
@@ -190,7 +191,7 @@ export class ArticleService {
       viewNumInfo: a.viewCount,
       commentNumInfo: a.commentCount,
       collectNumInfo: String(a.collectCount),
-      pubTimeInfo: a.publishedAt?.toISOString() || '',
+      pubTimeInfo: formatDisplayTime(a.publishedAt),
     }));
 
     void total;

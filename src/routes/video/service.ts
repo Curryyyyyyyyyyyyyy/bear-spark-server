@@ -1,6 +1,35 @@
 import { AppDataSource } from '../../database/connection.js';
 import { Video, User, Category, Like } from '../../entity/index.js';
 import { NotFoundError } from '../../utils/helper.js';
+import { existsSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { formatDisplayTime } from '../../utils/time.js';
+
+type PublishVideoInput = Partial<Video> & {
+  videoFileHash?: string;
+  coverFileHash?: string;
+  videoUrl?: string;
+  coverUrl?: string;
+};
+
+const uploadRoot = join(process.cwd(), 'public', 'uploads');
+const defaultAvatar = '/imgs/default-avatar.png';
+
+function findUploadedUrl(fileHash?: string) {
+  if (!fileHash || !existsSync(uploadRoot)) return undefined;
+
+  const safeHash = fileHash.replace(/[^a-zA-Z0-9_-]/g, '');
+  const file = readdirSync(uploadRoot).find((item) => item === safeHash || item.startsWith(`${safeHash}.`));
+
+  return file ? `/bear-spark/uploads/${file}` : undefined;
+}
+
+function formatDuration(duration?: number) {
+  const seconds = Math.max(0, Math.floor(duration || 0));
+  const minute = Math.floor(seconds / 60);
+  const second = String(seconds % 60).padStart(2, '0');
+  return `${minute}:${second}`;
+}
 
 export class VideoService {
   private videoRepo = AppDataSource.getRepository(Video);
@@ -8,14 +37,26 @@ export class VideoService {
   private categoryRepo = AppDataSource.getRepository(Category);
   private likeRepo = AppDataSource.getRepository(Like);
 
-  async publishVideo(authorId: number, data: Partial<Video>) {
+  async publishVideo(authorId: number, data: PublishVideoInput) {
     const user = await this.userRepo.findOne({ where: { id: authorId } });
     if (!user) {
       throw new NotFoundError('用户不存在');
     }
 
+    const url = data.url || data.videoUrl || findUploadedUrl(data.videoFileHash);
+    if (!url) {
+      throw new NotFoundError('视频文件未上传完成');
+    }
+
+    const coverImage = data.coverImage || data.coverUrl || findUploadedUrl(data.coverFileHash);
     const video = this.videoRepo.create({
-      ...data,
+      title: data.title || '未命名视频',
+      ...(data.description !== undefined && { description: data.description }),
+      url,
+      ...(coverImage !== undefined && { coverImage }),
+      ...(data.duration !== undefined && { duration: Math.round(Number(data.duration)) }),
+      ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+      ...(data.commentAble !== undefined && { commentAble: data.commentAble }),
       authorId,
       status: 'published',
       publishedAt: new Date(),
@@ -48,19 +89,26 @@ export class VideoService {
 
     const records = videos.map((v) => ({
       videoId: v.id,
+      videoTitle: v.title,
       title: v.title,
       description: v.description,
+      videoUrl: v.url,
       url: v.url,
+      coverUrl: v.coverImage,
       coverImage: v.coverImage,
       duration: v.duration,
+      videoDurationInfo: formatDuration(v.duration),
       viewCount: v.viewCount,
       likeCount: v.likeCount,
       commentCount: v.commentCount,
+      publishTimeInfo: formatDisplayTime(v.publishedAt),
       publishedAt: v.publishedAt,
+      authorId: v.author.id,
+      authorName: v.author.nickname || v.author.phone,
       author: {
         userId: v.author.id,
-        username: v.author.nickname,
-        avatarUrl: v.author.avatar,
+        username: v.author.nickname || v.author.phone,
+        avatarUrl: v.author.avatar || defaultAvatar,
       },
     }));
 
@@ -89,20 +137,32 @@ export class VideoService {
 
     return {
       videoId: video.id,
+      videoTitle: video.title,
       title: video.title,
       description: video.description,
+      videoUrl: video.url,
       url: video.url,
+      coverUrl: video.coverImage,
       coverImage: video.coverImage,
       duration: video.duration,
+      videoDurationInfo: formatDuration(video.duration),
       viewCount: video.viewCount + 1,
       likeCount: video.likeCount,
       commentCount: video.commentCount,
       liked: liked ? 1 : 0,
+      publishTimeInfo: formatDisplayTime(video.publishedAt),
       publishedAt: video.publishedAt,
+      authorId: video.author.id,
+      authorName: video.author.nickname || video.author.phone,
       author: {
         userId: video.author.id,
-        username: video.author.nickname,
-        avatarUrl: video.author.avatar,
+        username: video.author.nickname || video.author.phone,
+        avatarUrl: video.author.avatar || defaultAvatar,
+      },
+      authorInfo: {
+        userId: video.author.id,
+        username: video.author.nickname || video.author.phone,
+        avatarUrl: video.author.avatar || defaultAvatar,
       },
     };
   }

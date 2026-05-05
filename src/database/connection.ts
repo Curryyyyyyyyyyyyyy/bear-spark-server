@@ -20,9 +20,25 @@ export const AppDataSource = new DataSource({
 export async function initDatabase(): Promise<void> {
   try {
     await AppDataSource.initialize();
+    await normalizeSchema();
     console.log('✅ Database connected successfully');
   } catch (error) {
     console.error('❌ Database connection failed:', error);
     process.exit(1);
+  }
+}
+
+async function normalizeSchema(): Promise<void> {
+  if (config.NODE_ENV === 'test') {
+    return;
+  }
+
+  const rows = await AppDataSource.query(
+    "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vote' AND COLUMN_NAME = 'deadline'"
+  ) as { DATA_TYPE: string }[];
+  const deadlineColumn = rows[0];
+
+  if (deadlineColumn && deadlineColumn.DATA_TYPE !== 'datetime') {
+    await AppDataSource.query('ALTER TABLE `vote` MODIFY `deadline` datetime NULL');
   }
 }

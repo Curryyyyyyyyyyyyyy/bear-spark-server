@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../database/connection.js';
 import { Draft } from '../../entity/index.js';
 import { NotFoundError } from '../../utils/helper.js';
+import { formatDisplayTime } from '../../utils/time.js';
 
 export class DraftService {
   private draftRepo = AppDataSource.getRepository(Draft);
@@ -53,7 +54,7 @@ export class DraftService {
       draftId: d.id,
       title: d.title,
       content: d.content,
-      lastSaveTimeInfo: d.updatedAt.toISOString(),
+      lastSaveTimeInfo: formatDisplayTime(d.updatedAt),
     }));
 
     return { total, records };

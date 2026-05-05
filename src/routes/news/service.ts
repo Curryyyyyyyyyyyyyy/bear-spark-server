@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../database/connection.js';
 import { Article, News, User, Tag, Like, Vote } from '../../entity/index.js';
 import { NotFoundError, BadRequestError } from '../../utils/helper.js';
+import { formatDisplayTime } from '../../utils/time.js';
 import { voteService } from '../vote/service.js';
 
 export class NewsService {
@@ -10,6 +11,14 @@ export class NewsService {
   private likeRepo = AppDataSource.getRepository(Like);
   private voteRepo = AppDataSource.getRepository(Vote);
   private articleRepo = AppDataSource.getRepository(Article);
+
+  private async resolveTagName(tag?: string, tagId?: number | string) {
+    if (tag) return tag;
+    if (tagId === undefined || tagId === null || tagId === '') return undefined;
+
+    const tagEntity = await this.tagRepo.findOne({ where: { id: Number(tagId) } });
+    return tagEntity?.name;
+  }
 
   async getPrepareInfo(_userId?: number) {
     // 获取最近使用的标签
@@ -54,7 +63,7 @@ export class NewsService {
     }
 
     const publishedAt = data.pubTime ? new Date(data.pubTime) : new Date();
-    const tag = data.tag ?? (data.tagId !== undefined ? String(data.tagId) : undefined);
+    const tag = await this.resolveTagName(data.tag, data.tagId);
     const news = this.newsRepo.create({
       ...data,
       ...(tag !== undefined && { tag }),
@@ -65,7 +74,7 @@ export class NewsService {
           bookNumInfo: 0,
           booked: 1,
           canceled: 0,
-          liveTimeInfo: data.bookLiveInfo.liveTime,
+          liveTimeInfo: formatDisplayTime(data.bookLiveInfo.liveTime as string | number | Date | null | undefined),
           anchorName: user.nickname || user.phone,
         },
       }),
@@ -89,12 +98,12 @@ export class NewsService {
     await this.userRepo.increment({ id: authorId }, 'articleCount', 1);
 
     // 更新标签使用次数
-    if (data.tag) {
-      const tag = await this.tagRepo.findOne({ where: { name: data.tag } });
-      if (tag) {
-        await this.tagRepo.increment({ id: tag.id }, 'useCount', 1);
+    if (tag) {
+      const existingTag = await this.tagRepo.findOne({ where: { name: tag } });
+      if (existingTag) {
+        await this.tagRepo.increment({ id: existingTag.id }, 'useCount', 1);
       } else {
-        const newTag = this.tagRepo.create({ name: data.tag, useCount: 1 });
+        const newTag = this.tagRepo.create({ name: tag, useCount: 1 });
         await this.tagRepo.save(newTag);
       }
     }
@@ -144,7 +153,7 @@ export class NewsService {
           quotedHappening: news.quotedHappening || null,
           articleInfo: news.articleInfo || null,
           imgUrlList: news.imgUrlList || [],
-          pubTimeInfo: news.publishedAt?.toISOString() || '',
+          pubTimeInfo: formatDisplayTime(news.publishedAt),
         },
         publisherInfo: {
           userId: news.author.id,
@@ -192,7 +201,7 @@ export class NewsService {
               summary: article.summary || '',
             },
             imgUrlList: [],
-            pubTimeInfo: article.publishedAt?.toISOString() || '',
+            pubTimeInfo: formatDisplayTime(article.publishedAt),
           },
           publisherInfo: {
             userId: article.author.id,
@@ -228,7 +237,7 @@ export class NewsService {
         quotedHappening: news.quotedHappening || null,
         articleInfo: news.articleInfo || null,
         imgUrlList: news.imgUrlList || [],
-        pubTimeInfo: news.publishedAt?.toISOString() || '',
+        pubTimeInfo: formatDisplayTime(news.publishedAt),
       },
       publisherInfo: {
         userId: news.author.id,
@@ -302,7 +311,7 @@ export class NewsService {
           quotedHappening: null,
           articleInfo: originalNews.articleInfo || null,
           imgUrlList: originalNews.imgUrlList || [],
-          pubTimeInfo: originalNews.publishedAt?.toISOString() || '',
+          pubTimeInfo: formatDisplayTime(originalNews.publishedAt),
         },
         publisherInfo: {
           userId: originalNews.author.id,
@@ -401,6 +410,7 @@ export class NewsService {
       voteId: vote.id,
       title: vote.title,
       voteNumInfo: String(vote.totalCount),
+      deadlineInfo: vote.deadline ? `${formatDisplayTime(vote.deadline)} 截止` : '长期有效',
     };
   }
 }

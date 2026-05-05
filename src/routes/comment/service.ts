@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../database/connection.js';
 import { Comment, Article, News, Video, Like } from '../../entity/index.js';
 import { NotFoundError, BadRequestError } from '../../utils/helper.js';
+import { formatDisplayTime } from '../../utils/time.js';
 
 export class CommentService {
   private commentRepo = AppDataSource.getRepository(Comment);
@@ -30,7 +31,7 @@ export class CommentService {
       commentId: c.id,
       content: c.content,
       atUserInfoList: c.atUserInfoList || [],
-      pubTimeInfo: c.createdAt.toISOString(),
+      pubTimeInfo: formatDisplayTime(c.createdAt),
       likeNumInfo: String(c.likeCount),
       liked: 0,
       replyNumInfo: c.replyCount,
@@ -59,7 +60,7 @@ export class CommentService {
       commentId: c.id,
       content: c.content,
       atUserInfoList: c.atUserInfoList || [],
-      pubTimeInfo: c.createdAt.toISOString(),
+      pubTimeInfo: formatDisplayTime(c.createdAt),
       likeNumInfo: String(c.likeCount),
       liked: 0,
       repliedUserId: c.parentId,

@@ -17,11 +17,12 @@ export class NewsController {
   }
 
   async getNewsList(ctx: any) {
-    const { page = 1, pageNum, pageSize = 10, userId, tag } = ctx.query;
+    const { page = 1, pageNum, pageSize = 10, userId, selectedUserId, listedUserId, tag } = ctx.query;
+    const queryUserId = userId ?? selectedUserId ?? listedUserId;
     const result = await newsService.getNewsList({
       page: Number(pageNum ?? page),
       pageSize: Number(pageSize),
-      ...(userId !== undefined && userId !== '' && { userId: Number(userId) }),
+      ...(queryUserId !== undefined && queryUserId !== '' && { userId: Number(queryUserId) }),
       tag: tag as string,
     });
     ctx.body = success(result);

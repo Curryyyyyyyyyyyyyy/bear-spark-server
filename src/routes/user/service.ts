@@ -1,11 +1,15 @@
 import { AppDataSource } from '../../database/connection.js';
-import { User, Follow } from '../../entity/index.js';
+import { Article, Follow, News, User, Video } from '../../entity/index.js';
 import { NotFoundError, BadRequestError } from '../../utils/helper.js';
+import { formatDisplayTime } from '../../utils/time.js';
 
 
 export class UserService {
   private userRepo = AppDataSource.getRepository(User);
   private followRepo = AppDataSource.getRepository(Follow);
+  private newsRepo = AppDataSource.getRepository(News);
+  private articleRepo = AppDataSource.getRepository(Article);
+  private videoRepo = AppDataSource.getRepository(Video);
 
   async getUserInfo(userId: number) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
@@ -13,24 +17,36 @@ export class UserService {
       throw new NotFoundError('用户不存在');
     }
 
+    const [followingCount, fanCount, newsCount, articleCount, videoCount] = await Promise.all([
+      this.followRepo.count({ where: { followerId: userId } }),
+      this.followRepo.count({ where: { followingId: userId } }),
+      this.newsRepo.count({ where: { authorId: userId, status: 'published' } }),
+      this.articleRepo.count({ where: { authorId: userId, status: 'published' } }),
+      this.videoRepo.count({ where: { authorId: userId, status: 'published' } }),
+    ]);
+
     return {
       userId: user.id,
       phone: user.phone,
       nickname: user.nickname,
+      username: user.nickname || user.phone,
       avatar: user.avatar,
       avatarUrl: user.avatar,
       bio: user.bio,
-      followerNumInfo: user.followerCount,
-      fanNumInfo: user.followerCount,
-      happeningNumInfo: user.articleCount + user.videoCount,
+      followerNumInfo: followingCount,
+      fanNumInfo: fanCount,
+      happeningNumInfo: newsCount + articleCount + videoCount,
       currencyInfo: {
         meritNumInfo: user.meritCount,
         coinNumInfo: user.coinCount,
       },
-      followingCount: user.followingCount,
-      articleCount: user.articleCount,
-      videoCount: user.videoCount,
+      followingCount,
+      followerCount: fanCount,
+      articleCount,
+      videoCount,
+      newsCount,
       createdAt: user.createdAt,
+      createdAtInfo: formatDisplayTime(user.createdAt),
     };
   }
 

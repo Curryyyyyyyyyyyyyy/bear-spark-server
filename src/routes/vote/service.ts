@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../database/connection.js';
 import { Vote, VoteOption, VoteRecord, News, User } from '../../entity/index.js';
 import { NotFoundError, BadRequestError } from '../../utils/helper.js';
+import { formatDisplayTime } from '../../utils/time.js';
 
 export class VoteService {
   private voteRepo = AppDataSource.getRepository(Vote);
@@ -8,6 +9,20 @@ export class VoteService {
   private voteRecordRepo = AppDataSource.getRepository(VoteRecord);
   private newsRepo = AppDataSource.getRepository(News);
   private userRepo = AppDataSource.getRepository(User);
+
+  private normalizeDeadline(deadline?: number | string | Date): Date | undefined {
+    if (deadline === undefined || deadline === null || deadline === 0 || deadline === '') {
+      return undefined;
+    }
+
+    if (deadline instanceof Date) {
+      return Number.isNaN(deadline.getTime()) ? undefined : deadline;
+    }
+
+    const parsed = typeof deadline === 'number' ? new Date(deadline) : new Date(deadline);
+
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
 
   async getVoteDetail(voteId: number, userId?: number) {
     const vote = await this.voteRepo.findOne({
@@ -70,6 +85,7 @@ export class VoteService {
       title: vote.title,
       desc: vote.description || '',
       voteNumInfo: String(vote.totalCount),
+      deadlineInfo: vote.deadline ? `${formatDisplayTime(vote.deadline)} 截止` : '长期有效',
       voteType: vote.voteType,
       optionList,
       voteLim: vote.voteLimit,
@@ -127,17 +143,14 @@ export class VoteService {
     newsId?: number;
     voteType?: number;
     voteLimit?: number;
-      deadline?: number | string;
+      deadline?: number | string | Date;
       desc?: string;
       voteLim?: number;
       optionList?: { optionContent: string; optionPhotoUrl?: string }[];
       options?: { optionContent: string; optionPhotoUrl?: string }[];
   }) {
     const options = data.options ?? data.optionList ?? [];
-    const deadline =
-      typeof data.deadline === 'string'
-        ? new Date(data.deadline).getTime()
-        : data.deadline;
+    const deadline = this.normalizeDeadline(data.deadline);
     const vote = this.voteRepo.create({
       title: data.title,
       ...(data.description !== undefined && { description: data.description }),

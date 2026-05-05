@@ -31,8 +31,8 @@ export class Vote {
   @Column({ type: 'int', default: 1, name: 'vote_limit' })
   voteLimit!: number;
 
-  @Column({ type: 'int', default: 0 })
-  deadline!: number;
+  @Column({ type: 'datetime', nullable: true })
+  deadline?: Date;
 
   @Column({ type: 'int', name: 'vote_num_info', default: 0 })
   totalCount!: number;
