@@ -1,10 +1,21 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { existsSync } from 'fs';
 
-dotenv.config();
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.production.env'
+  : process.env.NODE_ENV === 'test'
+    ? '.test.env'
+    : '.development.env';
+
+if (existsSync(envFile)) {
+  dotenv.config({ path: envFile });
+} else {
+  dotenv.config();
+}
 
 const envSchema = z.object({
-  PORT: z.string().default('3000').transform(Number),
+  PORT: z.string().default('8888').transform(Number),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DB_HOST: z.string().default('localhost'),
   DB_PORT: z.string().default('3306').transform(Number),

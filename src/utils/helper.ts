@@ -64,13 +64,13 @@ export function success<T>(data: T, message = 'Success'): ApiResponse<T> {
 
 export function errorResponse(
   statusCode: number,
-  code: string,
+  _code: string,
   message: string
-): ApiResponse {
+): ApiResponse<null> {
   return {
     code: statusCode,
     message,
-    data: null as unknown as T,
+    data: null,
   };
 }
 

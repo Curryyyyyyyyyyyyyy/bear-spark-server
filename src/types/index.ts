@@ -90,7 +90,7 @@ export interface ICategory {
 
 export interface JwtPayload {
   userId: number;
-  username: string;
+  phone: string;
   iat?: number;
   exp?: number;
 }

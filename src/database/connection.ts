@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { config } from '../config/index.js';
-import type { IUser, IArticle, INews, IVideo, IComment, ICategory } from '../types/index.js';
+import * as entities from '../entity/index.js';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -12,7 +12,7 @@ export const AppDataSource = new DataSource({
   database: config.DB_DATABASE,
   synchronize: config.NODE_ENV === 'development',
   logging: config.NODE_ENV === 'development',
-  entities: [],
+  entities: Object.values(entities),
   migrations: ['src/database/migrations/*.ts'],
   subscribers: [],
 });

@@ -9,7 +9,7 @@ vi.mock('dotenv', () => ({
 describe('Config', () => {
   beforeAll(() => {
     process.env = {
-      PORT: '3000',
+      PORT: '8888',
       NODE_ENV: 'development',
       DB_HOST: 'localhost',
       DB_PORT: '3306',
@@ -24,7 +24,7 @@ describe('Config', () => {
 
   it('should validate and parse environment variables', async () => {
     const { config } = await import('./index.js');
-    expect(config.PORT).toBe(3000);
+    expect(config.PORT).toBe(8888);
     expect(config.NODE_ENV).toBe('development');
     expect(config.DB_DATABASE).toBe('test_db');
   });
