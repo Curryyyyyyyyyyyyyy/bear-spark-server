@@ -74,6 +74,9 @@ export class News {
   @Column({ type: 'json', name: 'vote_info', nullable: true })
   voteInfo?: Record<string, unknown>;
 
+  @Column({ type: 'json', name: 'book_live_info', nullable: true })
+  bookLiveInfo?: Record<string, unknown>;
+
   @Column({ type: 'varchar', length: 20, default: 'published' })
   status!: 'draft' | 'published' | 'archived';
 

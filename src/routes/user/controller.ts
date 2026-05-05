@@ -26,22 +26,28 @@ export class UserController {
   }
 
   async getFollowerList(ctx: any) {
-    const { userId } = ctx.query;
-    const { page = 1, pageSize = 20 } = ctx.query;
+    const userId = ctx.params.id ?? ctx.query.userId;
+    const { page = 1, pageNum, pageSize = 20 } = ctx.query;
     const result = await userService.getFollowerList(
       Number(userId),
-      Number(page),
+      Number(pageNum ?? page),
       Number(pageSize)
     );
     ctx.body = success(result);
   }
 
+  async getCurrentFollowerList(ctx: any) {
+    const userId = ctx.state.user?.userId ?? 1;
+    const result = await userService.getFollowerList(Number(userId), 1, 20);
+    ctx.body = success({ followerList: result.records });
+  }
+
   async getFollowingList(ctx: any) {
-    const { userId } = ctx.query;
-    const { page = 1, pageSize = 20 } = ctx.query;
+    const userId = ctx.params.id ?? ctx.query.userId;
+    const { page = 1, pageNum, pageSize = 20 } = ctx.query;
     const result = await userService.getFollowingList(
       Number(userId),
-      Number(page),
+      Number(pageNum ?? page),
       Number(pageSize)
     );
     ctx.body = success(result);

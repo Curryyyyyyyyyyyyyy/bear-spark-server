@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../database/connection.js';
-import { News, User, Tag, Like, Vote } from '../../entity/index.js';
+import { Article, News, User, Tag, Like, Vote } from '../../entity/index.js';
 import { NotFoundError, BadRequestError } from '../../utils/helper.js';
+import { voteService } from '../vote/service.js';
 
 export class NewsService {
   private newsRepo = AppDataSource.getRepository(News);
@@ -8,6 +9,7 @@ export class NewsService {
   private tagRepo = AppDataSource.getRepository(Tag);
   private likeRepo = AppDataSource.getRepository(Like);
   private voteRepo = AppDataSource.getRepository(Vote);
+  private articleRepo = AppDataSource.getRepository(Article);
 
   async getPrepareInfo(_userId?: number) {
     // 获取最近使用的标签
@@ -18,7 +20,7 @@ export class NewsService {
 
     // 获取关注的用户
     const followers = await this.userRepo.find({
-      select: ['id', 'username', 'avatar'],
+      select: ['id', 'nickname', 'avatar', 'followerCount'],
       order: { createdAt: 'DESC' },
       take: 8,
     });
@@ -32,7 +34,7 @@ export class NewsService {
       })),
       followerList: followers.map((f) => ({
         userId: f.id,
-        username: f.username,
+        username: f.nickname || f.phone,
         avatarUrl: f.avatar,
         fansNumInfo: f.followerCount,
       })),
@@ -40,20 +42,48 @@ export class NewsService {
     };
   }
 
-  async publishNews(authorId: number, data: Partial<News>) {
+  async publishNews(authorId: number, data: Partial<News> & {
+    tagId?: number | string;
+    pubTime?: string;
+    voteInfo?: Record<string, unknown>;
+    bookLiveInfo?: Record<string, unknown> | null;
+  }) {
     const user = await this.userRepo.findOne({ where: { id: authorId } });
     if (!user) {
       throw new NotFoundError('用户不存在');
     }
 
+    const publishedAt = data.pubTime ? new Date(data.pubTime) : new Date();
+    const tag = data.tag ?? (data.tagId !== undefined ? String(data.tagId) : undefined);
     const news = this.newsRepo.create({
       ...data,
+      ...(tag !== undefined && { tag }),
+      ...(data.bookLiveInfo !== undefined && data.bookLiveInfo !== null && {
+        bookLiveInfo: {
+          ...data.bookLiveInfo,
+          bookLiveId: Date.now(),
+          bookNumInfo: 0,
+          booked: 1,
+          canceled: 0,
+          liveTimeInfo: data.bookLiveInfo.liveTime,
+          anchorName: user.nickname || user.phone,
+        },
+      }),
       authorId,
       status: 'published',
-      publishedAt: new Date(),
+      publishedAt,
     });
 
     await this.newsRepo.save(news);
+
+    if (data.voteInfo) {
+      const vote = await voteService.createVote(authorId, {
+        ...(data.voteInfo as any),
+        newsId: news.id,
+      });
+      news.voteId = vote.voteId;
+      await this.newsRepo.save(news);
+    }
 
     // 更新用户动态计数
     await this.userRepo.increment({ id: authorId }, 'articleCount', 1);
@@ -110,6 +140,7 @@ export class NewsService {
           voteSimpleInfo: news.voteId
             ? await this.getVoteSimpleInfo(news.voteId)
             : null,
+          bookLiveInfo: news.bookLiveInfo || null,
           quotedHappening: news.quotedHappening || null,
           articleInfo: news.articleInfo || null,
           imgUrlList: news.imgUrlList || [],
@@ -117,7 +148,7 @@ export class NewsService {
         },
         publisherInfo: {
           userId: news.author.id,
-          username: news.author.username,
+          username: news.author.nickname || news.author.phone,
           avatarUrl: news.author.avatar,
         },
       }))
@@ -133,6 +164,44 @@ export class NewsService {
     });
 
     if (!news) {
+      const article = await this.articleRepo.findOne({
+        where: { id: happeningId },
+        relations: ['author'],
+      });
+
+      if (article) {
+        return {
+          happeningInfo: {
+            happeningId: article.id,
+            title: '',
+            content: '',
+            atUserInfoList: [],
+            tag: article.tags?.[0] || '',
+            viewNumInfo: article.viewCount,
+            likeNumInfo: String(article.likeCount),
+            commentNumInfo: article.commentCount,
+            forwardNumInfo: 0,
+            commentAble: article.commentAble,
+            advanceRelease: 0,
+            voteSimpleInfo: null,
+            bookLiveInfo: null,
+            quotedHappening: null,
+            articleInfo: {
+              articleId: article.id,
+              title: article.title,
+              summary: article.summary || '',
+            },
+            imgUrlList: [],
+            pubTimeInfo: article.publishedAt?.toISOString() || '',
+          },
+          publisherInfo: {
+            userId: article.author.id,
+            username: article.author.nickname || article.author.phone,
+            avatarUrl: article.author.avatar,
+          },
+        };
+      }
+
       throw new NotFoundError('动态不存在');
     }
 
@@ -155,6 +224,7 @@ export class NewsService {
         voteSimpleInfo: news.voteId
           ? await this.getVoteSimpleInfo(news.voteId)
           : null,
+        bookLiveInfo: news.bookLiveInfo || null,
         quotedHappening: news.quotedHappening || null,
         articleInfo: news.articleInfo || null,
         imgUrlList: news.imgUrlList || [],
@@ -162,7 +232,7 @@ export class NewsService {
       },
       publisherInfo: {
         userId: news.author.id,
-        username: news.author.username,
+        username: news.author.nickname || news.author.phone,
         avatarUrl: news.author.avatar,
       },
     };
@@ -228,6 +298,7 @@ export class NewsService {
           commentAble: originalNews.commentAble,
           advanceRelease: originalNews.advanceRelease,
           voteSimpleInfo: null,
+          bookLiveInfo: originalNews.bookLiveInfo || null,
           quotedHappening: null,
           articleInfo: originalNews.articleInfo || null,
           imgUrlList: originalNews.imgUrlList || [],
@@ -235,7 +306,7 @@ export class NewsService {
         },
         publisherInfo: {
           userId: originalNews.author.id,
-          username: originalNews.author.username,
+          username: originalNews.author.nickname || originalNews.author.phone,
           avatarUrl: originalNews.author.avatar,
         },
       },
@@ -298,7 +369,7 @@ export class NewsService {
 
     const records = likes.map((l) => ({
       userId: l.user.id,
-      username: l.user.username,
+      username: l.user.nickname || l.user.phone,
       avatarUrl: l.user.avatar,
     }));
 
@@ -315,7 +386,7 @@ export class NewsService {
 
     const records = forwards.map((f) => ({
       userId: f.author.id,
-      username: f.author.username,
+      username: f.author.nickname || f.author.phone,
       avatarUrl: f.author.avatar,
     }));
 

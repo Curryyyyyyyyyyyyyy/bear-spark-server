@@ -23,8 +23,8 @@ export class CategoryController {
 
   async updateCategory(ctx: any) {
     requireAuth(ctx);
-    const { categoryId } = ctx.params;
     const data = ctx.request.body as Record<string, unknown>;
+    const categoryId = ctx.params.categoryId ?? data.categoryId;
     const result = await categoryService.updateCategory(Number(categoryId), data as any);
     ctx.body = success(result);
   }

@@ -17,9 +17,9 @@ export class NewsController {
   }
 
   async getNewsList(ctx: any) {
-    const { page = 1, pageSize = 10, userId, tag } = ctx.query;
+    const { page = 1, pageNum, pageSize = 10, userId, tag } = ctx.query;
     const result = await newsService.getNewsList({
-      page: Number(page),
+      page: Number(pageNum ?? page),
       pageSize: Number(pageSize),
       ...(userId !== undefined && userId !== '' && { userId: Number(userId) }),
       tag: tag as string,
@@ -68,8 +68,10 @@ export class NewsController {
 
   async likeNews(ctx: any) {
     const user = requireAuth(ctx);
-    const { happeningId } = ctx.request.body as { happeningId: number };
-    const result = await newsService.likeNews(user.userId, Number(happeningId));
+    const { happeningId, liked } = ctx.request.body as { happeningId: number; liked?: number };
+    const result = liked === 0
+      ? await newsService.unlikeNews(user.userId, Number(happeningId))
+      : await newsService.likeNews(user.userId, Number(happeningId));
     ctx.body = success(result);
   }
 
@@ -81,20 +83,20 @@ export class NewsController {
   }
 
   async getLikeList(ctx: any) {
-    const { happeningId, page = 1, pageSize = 20 } = ctx.query;
+    const { happeningId, page = 1, pageNum, pageSize = 20 } = ctx.query;
     const result = await newsService.getLikeList(
       Number(happeningId),
-      Number(page),
+      Number(pageNum ?? page),
       Number(pageSize)
     );
     ctx.body = success(result);
   }
 
   async getForwardList(ctx: any) {
-    const { happeningId, page = 1, pageSize = 20 } = ctx.query;
+    const { happeningId, page = 1, pageNum, pageSize = 20 } = ctx.query;
     const result = await newsService.getForwardList(
       Number(happeningId),
-      Number(page),
+      Number(pageNum ?? page),
       Number(pageSize)
     );
     ctx.body = success(result);

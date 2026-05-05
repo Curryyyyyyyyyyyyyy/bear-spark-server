@@ -6,6 +6,8 @@ const router = new Router();
 // 获取当前用户信息
 router.get('/info/user', async (ctx) => userController.getUserInfo(ctx));
 
+router.get('/happening/followerList', async (ctx) => userController.getCurrentFollowerList(ctx));
+
 // 获取指定用户信息
 router.get('/user/:id', async (ctx) => userController.getUserInfoById(ctx));
 

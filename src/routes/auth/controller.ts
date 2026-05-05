@@ -65,10 +65,20 @@ export class AuthController {
   }
 
   async changePassword(ctx: Ctx) {
-    const { oldPassword, newPassword } = ctx.request.body as {
-      oldPassword: string;
-      newPassword: string;
+    const { oldPassword, newPassword, phone, password, code } = ctx.request.body as {
+      oldPassword?: string;
+      newPassword?: string;
+      phone?: string;
+      password?: string;
+      code?: string;
     };
+
+    if (phone && password && code) {
+      const result = await authService.resetPassword(phone, password, code);
+      ctx.body = success(result);
+      return;
+    }
+
     const user = requireAuth(ctx);
 
     if (!oldPassword || !newPassword) {

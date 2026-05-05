@@ -7,9 +7,11 @@ const router = new Router();
 router.post('/video', async (ctx) => videoController.publishVideo(ctx));
 
 // 获取视频列表
+router.get('/video/list/:pageNum/:pageSize', async (ctx) => videoController.getVideoList(ctx));
 router.get('/video/list', async (ctx) => videoController.getVideoList(ctx));
 
 // 获取视频详情
+router.get('/video/play/:id', async (ctx) => videoController.getVideoDetail(ctx));
 router.get('/video/:id', async (ctx) => videoController.getVideoDetail(ctx));
 
 // 修改视频

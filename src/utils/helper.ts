@@ -51,6 +51,7 @@ export class InternalServerError extends AppError {
 export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
+  msg: string;
   data: T;
 }
 
@@ -58,6 +59,7 @@ export function success<T>(data: T, message = 'Success'): ApiResponse<T> {
   return {
     code: 0,
     message,
+    msg: message,
     data,
   };
 }
@@ -70,6 +72,7 @@ export function errorResponse(
   return {
     code: statusCode,
     message,
+    msg: message,
     data: null,
   };
 }

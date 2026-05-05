@@ -68,6 +68,7 @@ export class UserService {
     const followerList = follows.map((f) => ({
       userId: f.follower.id,
       phone: f.follower.phone,
+      username: f.follower.nickname || f.follower.phone,
       avatarUrl: f.follower.avatar,
       fansNumInfo: f.follower.followerCount,
     }));
@@ -87,6 +88,7 @@ export class UserService {
     const followingList = follows.map((f) => ({
       userId: f.following.id,
       phone: f.following.phone,
+      username: f.following.nickname || f.following.phone,
       avatarUrl: f.following.avatar,
       fansNumInfo: f.following.followerCount,
     }));

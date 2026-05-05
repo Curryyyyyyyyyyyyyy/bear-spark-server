@@ -4,20 +4,20 @@ import { requireAuth } from '../../middleware/auth.js';
 
 export class CommentController {
   async getBldgComment(ctx: any) {
-    const { happeningId, page = 1, pageSize = 20 } = ctx.query;
+    const { happeningId, page = 1, pageNum, pageSize = 20 } = ctx.query;
     const result = await commentService.getBldgComment(
       Number(happeningId),
-      Number(page),
+      Number(pageNum ?? page),
       Number(pageSize)
     );
     ctx.body = success(result);
   }
 
   async getLayerComment(ctx: any) {
-    const { parentId, page = 1, pageSize = 20 } = ctx.query;
+    const { parentId, commentId, page = 1, pageNum, pageSize = 20 } = ctx.query;
     const result = await commentService.getLayerComment(
-      Number(parentId),
-      Number(page),
+      Number(parentId ?? commentId),
+      Number(pageNum ?? page),
       Number(pageSize)
     );
     ctx.body = success(result);

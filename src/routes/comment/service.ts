@@ -37,7 +37,7 @@ export class CommentService {
       replyNum: c.replyCount * 2,
       userInfo: {
         userId: c.author.id,
-        username: c.author.username,
+        username: c.author.nickname || c.author.phone,
         avatarUrl: c.author.avatar,
       },
     }));
@@ -66,7 +66,7 @@ export class CommentService {
       repliedUserName: '',
       userInfo: {
         userId: c.author.id,
-        username: c.author.username,
+        username: c.author.nickname || c.author.phone,
         avatarUrl: c.author.avatar,
       },
     }));

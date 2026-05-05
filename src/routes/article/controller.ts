@@ -27,7 +27,12 @@ export class ArticleController {
   }
 
   async getArticleList(ctx: any) {
-    const { pageNum = 1, pageSize = 10, categoryId, listedUserId } = ctx.query;
+    const {
+      pageNum = ctx.params.pageNum ?? 1,
+      pageSize = ctx.params.pageSize ?? 10,
+      categoryId,
+      listedUserId,
+    } = ctx.query;
     const result = await articleService.getArticleList({
       pageNum: Number(pageNum),
       pageSize: Number(pageSize),

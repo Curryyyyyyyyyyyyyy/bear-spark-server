@@ -11,9 +11,15 @@ export class VideoController {
   }
 
   async getVideoList(ctx: any) {
-    const { page = 1, pageSize = 10, categoryId, userId } = ctx.query;
+    const {
+      page = ctx.params.pageNum ?? 1,
+      pageNum = ctx.params.pageNum,
+      pageSize = ctx.params.pageSize ?? 10,
+      categoryId,
+      userId,
+    } = ctx.query;
     const result = await videoService.getVideoList({
-      page: Number(page),
+      page: Number(pageNum ?? page),
       pageSize: Number(pageSize),
       ...(categoryId !== undefined && categoryId !== '' && { categoryId: Number(categoryId) }),
       ...(userId !== undefined && userId !== '' && { userId: Number(userId) }),

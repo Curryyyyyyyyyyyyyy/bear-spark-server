@@ -36,9 +36,12 @@ export class AuthService {
     return {
       token,
       user: {
+        userId: user.id,
         id: user.id,
         phone: user.phone,
+        username: user.nickname || user.phone,
         nickname: user.nickname,
+        avatarUrl: user.avatar,
         avatar: user.avatar,
       },
     };
@@ -73,9 +76,12 @@ export class AuthService {
     return {
       token,
       user: {
+        userId: user.id,
         id: user.id,
         phone: user.phone,
+        username: user.nickname || user.phone,
         nickname: user.nickname,
+        avatarUrl: user.avatar,
         avatar: user.avatar,
       },
     };
@@ -91,11 +97,28 @@ export class AuthService {
   }
 
   async verifyCode(phone: string, _code: string) {
+    void phone;
     // TODO: 验证验证码逻辑
     if (_code !== '200501') {
       throw new BadRequestError('验证码错误');
     }
     return { valid: true };
+  }
+
+  async resetPassword(phone: string, password: string, code: string) {
+    if (code !== '200501') {
+      throw new BadRequestError('验证码错误');
+    }
+
+    const user = await this.userRepo.findOne({ where: { phone } });
+    if (!user) {
+      throw new BadRequestError('手机号未注册');
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    await this.userRepo.save(user);
+
+    return { message: '密码修改成功' };
   }
 
   async changePassword(userId: number, oldPassword: string, newPassword: string) {

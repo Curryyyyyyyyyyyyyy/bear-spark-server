@@ -12,11 +12,12 @@ export class VoteController {
 
   async vote(ctx: any) {
     const user = requireAuth(ctx);
-    const { voteId, optionIds } = ctx.request.body as {
+    const { voteId, optionIds, optionIdList } = ctx.request.body as {
       voteId: number;
-      optionIds: number[];
+      optionIds?: number[];
+      optionIdList?: number[];
     };
-    const result = await voteService.vote(user.userId, voteId, optionIds);
+    const result = await voteService.vote(user.userId, voteId, optionIds ?? optionIdList ?? []);
     ctx.body = success(result);
   }
 

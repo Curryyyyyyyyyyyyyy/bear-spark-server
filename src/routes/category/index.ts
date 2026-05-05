@@ -13,6 +13,7 @@ router.get('/category/:categoryId', async (ctx) => categoryController.getCategor
 router.post('/category', async (ctx) => categoryController.createCategory(ctx));
 
 // 修改分类
+router.put('/category/:categoryId', async (ctx) => categoryController.updateCategory(ctx));
 router.put('/category', async (ctx) => categoryController.updateCategory(ctx));
 
 // 删除分类

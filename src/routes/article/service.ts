@@ -9,17 +9,44 @@ export class ArticleService {
   private collectRepo = AppDataSource.getRepository(Collect);
   private likeRepo = AppDataSource.getRepository(Like);
 
-  async publishArticle(authorId: number, data: Partial<Article>) {
+  private normalizeArticleData(data: Partial<Article> & {
+    coverUrl?: string;
+    categoryIdList?: number[];
+    tagId?: number | string;
+    tag?: string;
+    pubTime?: string;
+  }): Partial<Article> {
+    const categoryId = data.categoryId ?? data.categoryIdList?.[0];
+    const tagValue = data.tag ?? (data.tagId !== undefined ? String(data.tagId) : undefined);
+    const publishedAt = data.pubTime ? new Date(data.pubTime) : undefined;
+
+    return {
+      ...data,
+      ...(data.coverUrl !== undefined && { coverImage: data.coverUrl }),
+      ...(categoryId !== undefined && { categoryId }),
+      ...(tagValue !== undefined && { tags: [tagValue] }),
+      ...(publishedAt !== undefined && { publishedAt }),
+    };
+  }
+
+  async publishArticle(authorId: number, data: Partial<Article> & {
+    coverUrl?: string;
+    categoryIdList?: number[];
+    tagId?: number | string;
+    tag?: string;
+    pubTime?: string;
+  }) {
     const user = await this.userRepo.findOne({ where: { id: authorId } });
     if (!user) {
       throw new NotFoundError('用户不存在');
     }
 
+    const articleData = this.normalizeArticleData(data);
     const article = this.articleRepo.create({
-      ...data,
+      ...articleData,
       authorId,
       status: 'published',
-      publishedAt: new Date(),
+      publishedAt: articleData.publishedAt ?? new Date(),
     });
 
     await this.articleRepo.save(article);
@@ -28,8 +55,8 @@ export class ArticleService {
     await this.userRepo.increment({ id: authorId }, 'articleCount', 1);
 
     // 更新分类文章计数
-    if (data.categoryId) {
-      await this.categoryRepo.increment({ id: data.categoryId }, 'articleCount', 1);
+    if (article.categoryId) {
+      await this.categoryRepo.increment({ id: article.categoryId }, 'articleCount', 1);
     }
 
     return { articleId: article.id };
@@ -122,9 +149,10 @@ export class ArticleService {
       pubTimeInfo: article.publishedAt?.toISOString() || '',
       publisherInfo: {
         userId: article.author.id,
-        username: article.author.username,
+        username: article.author.nickname,
         avatarUrl: article.author.avatar,
       },
+      happeningId: article.id,
     };
   }
 
@@ -165,10 +193,17 @@ export class ArticleService {
       pubTimeInfo: a.publishedAt?.toISOString() || '',
     }));
 
-    return { total, records };
+    void total;
+    return records;
   }
 
-  async updateArticle(articleId: number, authorId: number, data: Partial<Article>) {
+  async updateArticle(articleId: number, authorId: number, data: Partial<Article> & {
+    coverUrl?: string;
+    categoryIdList?: number[];
+    tagId?: number | string;
+    tag?: string;
+    pubTime?: string;
+  }) {
     const article = await this.articleRepo.findOne({
       where: { id: articleId, authorId },
     });
@@ -177,7 +212,7 @@ export class ArticleService {
       throw new NotFoundError('文章不存在或无权限修改');
     }
 
-    Object.assign(article, data);
+    Object.assign(article, this.normalizeArticleData(data));
     await this.articleRepo.save(article);
 
     return { message: '修改成功' };

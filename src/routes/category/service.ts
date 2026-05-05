@@ -5,6 +5,21 @@ import { NotFoundError, ConflictError } from '../../utils/helper.js';
 export class CategoryService {
   private categoryRepo = AppDataSource.getRepository(Category);
 
+  private normalizeCategoryData(data: Partial<Category> & {
+    categoryName?: string;
+    categoryPhotoUrl?: string;
+  }): Partial<Category> {
+    const name = data.name ?? data.categoryName;
+    const slug = data.slug ?? (name ? encodeURIComponent(name).slice(0, 50) : undefined);
+
+    return {
+      ...data,
+      ...(name !== undefined && { name }),
+      ...(slug !== undefined && { slug }),
+      ...(data.categoryPhotoUrl !== undefined && { coverImage: data.categoryPhotoUrl }),
+    };
+  }
+
   async getCategoryList() {
     const categories = await this.categoryRepo.find({
       order: { sort: 'ASC', createdAt: 'DESC' },
@@ -33,15 +48,19 @@ export class CategoryService {
     };
   }
 
-  async createCategory(data: Partial<Category>) {
-    const existCategory = data.name
-      ? await this.categoryRepo.findOne({ where: { name: data.name } })
+  async createCategory(data: Partial<Category> & {
+    categoryName?: string;
+    categoryPhotoUrl?: string;
+  }) {
+    const normalizedData = this.normalizeCategoryData(data);
+    const existCategory = normalizedData.name
+      ? await this.categoryRepo.findOne({ where: { name: normalizedData.name } })
       : null;
     if (existCategory) {
       throw new ConflictError('分类名称已存在');
     }
 
-    const category = this.categoryRepo.create(data);
+    const category = this.categoryRepo.create(normalizedData);
     await this.categoryRepo.save(category);
 
     return {
@@ -50,13 +69,16 @@ export class CategoryService {
     };
   }
 
-  async updateCategory(categoryId: number, data: Partial<Category>) {
+  async updateCategory(categoryId: number, data: Partial<Category> & {
+    categoryName?: string;
+    categoryPhotoUrl?: string;
+  }) {
     const category = await this.categoryRepo.findOne({ where: { id: categoryId } });
     if (!category) {
       throw new NotFoundError('分类不存在');
     }
 
-    Object.assign(category, data);
+    Object.assign(category, this.normalizeCategoryData(data));
     await this.categoryRepo.save(category);
 
     return { message: '修改成功' };

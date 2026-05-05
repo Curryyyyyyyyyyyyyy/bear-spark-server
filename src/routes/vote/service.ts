@@ -55,7 +55,7 @@ export class VoteService {
         take: 10,
       });
       voterInfoList = allRecords.map((r) => ({
-        username: r.user.username,
+        username: r.user.nickname || r.user.phone,
         avatarUrl: r.user.avatar || '',
         optionsInfo: r.option.optionContent,
       }));
@@ -64,7 +64,7 @@ export class VoteService {
     return {
       publisherInfo: {
         userId: vote.authorId,
-        username: author?.username || '',
+        username: author?.nickname || author?.phone || '',
         avatarUrl: author?.avatar || '',
       },
       title: vote.title,
@@ -127,23 +127,32 @@ export class VoteService {
     newsId?: number;
     voteType?: number;
     voteLimit?: number;
-    deadline?: number;
-    options: { optionContent: string; optionPhotoUrl?: string }[];
+      deadline?: number | string;
+      desc?: string;
+      voteLim?: number;
+      optionList?: { optionContent: string; optionPhotoUrl?: string }[];
+      options?: { optionContent: string; optionPhotoUrl?: string }[];
   }) {
+    const options = data.options ?? data.optionList ?? [];
+    const deadline =
+      typeof data.deadline === 'string'
+        ? new Date(data.deadline).getTime()
+        : data.deadline;
     const vote = this.voteRepo.create({
       title: data.title,
       ...(data.description !== undefined && { description: data.description }),
+      ...(data.desc !== undefined && { description: data.desc }),
       ...(data.newsId !== undefined && { newsId: data.newsId }),
       authorId,
       voteType: data.voteType || 1,
-      voteLimit: data.voteLimit || 1,
-      ...(data.deadline !== undefined && { deadline: data.deadline }),
+      voteLimit: data.voteLimit || data.voteLim || 1,
+      ...(deadline !== undefined && { deadline }),
     });
 
     await this.voteRepo.save(vote);
 
     // 创建选项
-    for (const opt of data.options) {
+    for (const opt of options) {
       const option = this.voteOptionRepo.create({
         voteId: vote.id,
         ...opt,
